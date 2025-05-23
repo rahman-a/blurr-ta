@@ -1,50 +1,52 @@
 "use client";
-import React from "react";
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn as nextAuthSignIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
-type Props = object;
+// Define the form schema with Zod
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-export default function LoginForm({}: Props) {
+type LoginFormData = z.infer<typeof loginSchema>;
+
+export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, status } = useSession();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Check if the user just registered
   const registered = searchParams.get("registered");
 
-  // Redirect authenticated users
-  useEffect(() => {
-    if (status === "authenticated" && session) {
-      router.push("/dashboard");
-    }
-  }, [session, status, router]);
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-  // Don't render the login form for authenticated users
-  if (status === "authenticated") {
-    return null;
-  }
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const result = await nextAuthSignIn("credentials", {
+      const result = await signIn("credentials", {
         redirect: false,
-        email,
-        password,
+        email: data.email,
+        password: data.password,
       });
 
       if (!result || result.error) {
@@ -59,80 +61,87 @@ export default function LoginForm({}: Props) {
       } else {
         setError("Something went wrong. Please try again.");
       }
+    } finally {
       setIsLoading(false);
     }
   };
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your email and password to access your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
+    <Card className="w-full sm:w-[400px]">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl text-center">Login</CardTitle>
+        <CardDescription className="text-center">
+          {registered
+            ? "Registration successful! Please login with your credentials."
+            : "Enter your credentials to access your account"}
+        </CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
+          <CardContent className="space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            {registered && (
-              <Alert>
-                <AlertDescription>Registration successful! You can now log in.</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your email"
+                      type="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your password"
+                      type="password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <a
-              href="/register"
-              className="text-primary hover:underline"
-            >
-              Register
-            </a>
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+            <p className="text-sm text-muted-foreground text-center">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/register"
+                className="text-primary hover:underline"
+              >
+                Register
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
 }

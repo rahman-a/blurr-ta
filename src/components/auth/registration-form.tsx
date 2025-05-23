@@ -1,40 +1,41 @@
 "use client";
 
-import React from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSession } from "next-auth/react";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
 
-type Props = object;
+// Define the form schema with Zod
+const registrationSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-export default function RegistrationForm({}: Props) {
+type RegistrationFormData = z.infer<typeof registrationSchema>;
+
+export default function RegistrationForm() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect authenticated users
-  useEffect(() => {
-    if (status === "authenticated" && session) {
-      router.push("/dashboard");
-    }
-  }, [session, status, router]);
+  const form = useForm<RegistrationFormData>({
+    resolver: zodResolver(registrationSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+    },
+  });
 
-  // Don't render the registration form for authenticated users
-  if (status === "authenticated") {
-    return null;
-  }
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (data: RegistrationFormData) => {
     setIsLoading(true);
     setError(null);
 
@@ -44,17 +45,13 @@ export default function RegistrationForm({}: Props) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-        }),
+        body: JSON.stringify(data),
       });
 
-      const data = await response.json();
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to register");
+        throw new Error(responseData.message || "Failed to register");
       }
 
       router.push("/login?registered=true");
@@ -69,62 +66,75 @@ export default function RegistrationForm({}: Props) {
     }
   };
 
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex justify-center items-center min-h-screen bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>Enter your details to create a new account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
+    <Card className="w-full sm:w-[400px]">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl text-center">Create an account</CardTitle>
+        <CardDescription className="text-center">Enter your details to create a new account</CardDescription>
+      </CardHeader>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-4"
+        >
+          <CardContent className="space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="John Doe"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="name@example.com"
+                      type="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter your password"
+                      type="password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
               className="w-full"
@@ -132,20 +142,18 @@ export default function RegistrationForm({}: Props) {
             >
               {isLoading ? "Creating account..." : "Create account"}
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <a
-              href="/login"
-              className="text-primary hover:underline"
-            >
-              Login
-            </a>
-          </p>
-        </CardFooter>
-      </Card>
-    </div>
+            <p className="text-sm text-muted-foreground text-center">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="text-primary hover:underline"
+              >
+                Login
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
   );
 }
