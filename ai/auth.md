@@ -1,4 +1,6 @@
-# Auth Prompts
+# Auth Feature
+
+## Steps
 
 ### 1. Refactor the authentication page.
 
