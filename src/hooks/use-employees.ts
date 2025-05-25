@@ -1,5 +1,8 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
-import { getDepartments, getPositions, getEmployees } from "@/lib/actions/employee";
+import { getDepartments, getPositions } from "@/lib/actions/employee";
+import { Employee } from "@/types/project";
+
+const API_BASE = "/api/employees";
 
 export function useDepartments() {
   return useQuery({
@@ -9,19 +12,32 @@ export function useDepartments() {
   });
 }
 
-export function usePositions(departmentId?: string) {
+export function usePositions() {
   return useQuery({
-    queryKey: ["positions", departmentId],
-    queryFn: () => getPositions(departmentId),
+    queryKey: ["positions"],
+    queryFn: () => getPositions(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 export function useEmployees() {
-  return useQuery({
+  return useQuery<Employee[]>({
     queryKey: ["employees"],
-    queryFn: getEmployees,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    queryFn: async () => {
+      // Use the simple employees endpoint
+      const response = await fetch(`${API_BASE}/simple`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch employees: ${response.status}`);
+      }
+
+      const employees = await response.json();
+
+      // The simple API returns employees directly, no need to extract from data property
+      return employees;
+    },
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, Settings, LogOut, Folders } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { signOut } from "next-auth/react";
+import { LayoutDashboard, Users, Settings, Folders } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SidebarNavItemProps {
@@ -64,17 +62,6 @@ export function DashboardSidebar() {
             />
           </div>
         </ScrollArea>
-
-        <div className="border-t p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-2"
-            onClick={() => signOut({ callbackUrl: "/" })}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
-        </div>
       </div>
     </div>
   );
