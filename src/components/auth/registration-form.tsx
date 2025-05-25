@@ -4,30 +4,23 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-
-// Define the form schema with Zod
-const registrationSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-type RegistrationFormData = z.infer<typeof registrationSchema>;
+import { useRegister } from "@/hooks/use-auth";
+import { registerSchema, type RegisterData } from "@/lib/schemas/auth";
 
 export default function RegistrationForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<RegistrationFormData>({
-    resolver: zodResolver(registrationSchema),
+  const registerMutation = useRegister();
+
+  const form = useForm<RegisterData>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -35,23 +28,15 @@ export default function RegistrationForm() {
     },
   });
 
-  const onSubmit = async (data: RegistrationFormData) => {
-    setIsLoading(true);
+  const onSubmit = async (data: RegisterData) => {
     setError(null);
 
     try {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      const result = await registerMutation.mutateAsync(data);
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.message || "Failed to register");
+      if (!result.success) {
+        setError(result.message);
+        return;
       }
 
       router.push("/login?registered=true");
@@ -61,10 +46,10 @@ export default function RegistrationForm() {
       } else {
         setError("Something went wrong. Please try again.");
       }
-    } finally {
-      setIsLoading(false);
     }
   };
+
+  const isLoading = registerMutation.isPending;
 
   return (
     <Card className="w-full sm:w-[400px]">

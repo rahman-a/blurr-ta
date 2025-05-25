@@ -57,3 +57,154 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  positions Position[]
+  employees Employee[]
+}
+
+model Position {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  departmentId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  employees  Employee[]
+}
+
+model Employee {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String   @unique
+  phone        String?
+  hireDate     DateTime @default(now())
+  departmentId String
+  positionId   String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  position   Position   @relation(fields: [positionId], references: [id], onDelete: Restrict)
+  salaries   Salary[]
+  tasks      Task[]
+}
+
+model Compensation {
+  id           String           @id @default(cuid())
+  name         String
+  amount       Float
+  description  String?
+  isActive     Boolean          @default(true)
+  type         CompensationType
+  isPercentage Boolean          @default(false)
+  salaries     Salary[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([name])
+}
+
+model Salary {
+  id String @id @default(cuid())
+
+  // Basic Salary Information
+  basicSalary Float
+  grossSalary Float // Total salary before any deductions
+  netSalary   Float // Take-home salary after all deductions
+  currency    String     @default("USD")
+  salaryType  SalaryType @default(MONTHLY) // "hourly", "monthly", "yearly"
+
+  // Dates and Status
+  effectiveDate DateTime  @default(now())
+  endDate       DateTime?
+  isActive      Boolean   @default(true)
+
+  // Relationships
+  employeeId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  employee      Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  compensations Compensation[]
+
+  @@index([employeeId, isActive])
+}
+
+enum CompensationType {
+  ALLOWANCE
+  BONUS
+  DEDUCTION
+}
+
+enum SalaryType {
+  HOURLY
+  MONTHLY
+  YEARLY
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime      @default(now())
+  endDate     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  tasks Task[]
+
+  @@index([status])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  priority     Priority   @default(MEDIUM)
+  status       TaskStatus @default(TODO)
+  assignedToId String?
+  projectId    String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  assignedTo Employee? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([priority])
+  @@index([assignedToId])
+  @@index([projectId])
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
