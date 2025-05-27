@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DollarSign, Users, Filter, Download } from "lucide-react";
 import { format } from "date-fns";
 
@@ -93,31 +93,34 @@ export default function SalariesPage() {
 
   const monthOptions = generateMonthOptions();
 
-  const fetchSalaries = async (month?: number, year?: number, page: number = 1) => {
-    setIsLoading(true);
-    try {
-      const response = await getSalariesWithEmployees(month, year, page, pagination.pageSize);
-      const result = response as SalaryResponse;
+  const fetchSalaries = useCallback(
+    async (month?: number, year?: number, page: number = 1) => {
+      setIsLoading(true);
+      try {
+        const response = await getSalariesWithEmployees(month, year, page, pagination.pageSize);
+        const result = response as SalaryResponse;
 
-      setSalaries(result.data);
-      setPagination({
-        currentPage: result.currentPage,
-        totalPages: result.totalPages,
-        totalCount: result.totalCount,
-        pageSize: result.pageSize,
-      });
-    } catch (error) {
-      console.error("Error fetching salaries:", error);
-      setSalaries([]);
-      setPagination({
-        currentPage: 1,
-        totalPages: 0,
-        totalCount: 0,
-        pageSize: 10,
-      });
-    }
-    setIsLoading(false);
-  };
+        setSalaries(result.data);
+        setPagination({
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalCount: result.totalCount,
+          pageSize: result.pageSize,
+        });
+      } catch (error) {
+        console.error("Error fetching salaries:", error);
+        setSalaries([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 0,
+          totalCount: 0,
+          pageSize: 10,
+        });
+      }
+      setIsLoading(false);
+    },
+    [pagination.pageSize],
+  );
 
   const handleMonthFilter = (value: string) => {
     setFilterMonth(value);
@@ -140,7 +143,7 @@ export default function SalariesPage() {
     }
   };
 
-  const calculateTotalCompensations = (compensations: SalaryData["compensations"], basicSalary: number) => {
+  const calculateTotalCompensations = useCallback((compensations: SalaryData["compensations"], basicSalary: number) => {
     let bonuses = 0;
     let deductions = 0;
 
@@ -155,9 +158,9 @@ export default function SalariesPage() {
     });
 
     return { bonuses, deductions };
-  };
+  }, []);
 
-  const exportToCSV = () => {
+  const exportToCSV = useCallback(() => {
     const headers = [
       "Employee Name",
       "Email",
@@ -207,11 +210,11 @@ export default function SalariesPage() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-  };
+  }, [salaries, filterMonth, calculateTotalCompensations]);
 
   useEffect(() => {
     fetchSalaries(); // Load current active salaries on mount
-  }, []);
+  }, [fetchSalaries]);
 
   return (
     <div className="container p-4 sm:p-6">

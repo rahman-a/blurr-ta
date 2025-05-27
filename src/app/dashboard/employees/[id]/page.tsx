@@ -10,13 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getEmployeeById } from "@/lib/actions/employee";
 
 interface EmployeeDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EmployeeDetailPage({ params }: EmployeeDetailPageProps) {
-  const employee = await getEmployeeById(params.id);
+  const { id } = await params;
+  const employee = await getEmployeeById(id);
 
   if (!employee) {
     notFound();

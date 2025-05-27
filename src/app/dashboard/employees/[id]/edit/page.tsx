@@ -7,14 +7,15 @@ import { getEmployeeById, getDepartments, getPositions, getCompensations } from 
 import { EditEmployeeForm } from "@/components/employees/edit-employee-form";
 
 interface EditEmployeePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EditEmployeePage({ params }: EditEmployeePageProps) {
+  const { id } = await params;
   const [employee, departments, positions, compensations] = await Promise.all([
-    getEmployeeById(params.id),
+    getEmployeeById(id),
     getDepartments(),
     getPositions(),
     getCompensations(),

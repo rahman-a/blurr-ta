@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { Plus, DollarSign } from "lucide-react";
 
@@ -71,63 +71,66 @@ export default function EmployeesPage() {
   const [filters, setFilters] = useState<ActiveFilter[]>([]);
 
   // Create a reusable fetch function
-  const fetchEmployeesForPage = async (page: number, filtersToUse?: ActiveFilter[]) => {
-    if (isFetchingRef.current) {
-      console.log("Already fetching, skipping...");
-      return;
-    }
-
-    isFetchingRef.current = true;
-    setIsLoading(true);
-
-    // Use provided filters or current state filters
-    const currentFilters = filtersToUse || filters;
-
-    try {
-      console.log("Loading employees for page:", page, "with filters:", currentFilters);
-
-      const backendFilters = currentFilters.map((filter) => ({
-        attribute: filter.attribute,
-        operation: filter.operation,
-        value: filter.value,
-      }));
-
-      const searchParams = new URLSearchParams({
-        page: page.toString(),
-        pageSize: PAGE_SIZE.toString(),
-        filters: JSON.stringify(backendFilters),
-      });
-
-      console.log("Making API call to:", `/api/employees?${searchParams}`);
-      const response = await fetch(`/api/employees?${searchParams}`);
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to fetch employees");
+  const fetchEmployeesForPage = useCallback(
+    async (page: number, filtersToUse?: ActiveFilter[]) => {
+      if (isFetchingRef.current) {
+        console.log("Already fetching, skipping...");
+        return;
       }
 
-      console.log("API response received:", result);
-      setEmployees(result.data);
-      setPagination({
-        currentPage: result.currentPage,
-        totalPages: result.totalPages,
-        totalCount: result.totalCount,
-        pageSize: result.pageSize,
-      });
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      setEmployees([]);
-      setPagination({
-        currentPage: 1,
-        totalPages: 0,
-        totalCount: 0,
-        pageSize: PAGE_SIZE,
-      });
-    } finally {
-      setIsLoading(false);
-      isFetchingRef.current = false;
-    }
-  };
+      isFetchingRef.current = true;
+      setIsLoading(true);
+
+      // Use provided filters or current state filters
+      const currentFilters = filtersToUse || filters;
+
+      try {
+        console.log("Loading employees for page:", page, "with filters:", currentFilters);
+
+        const backendFilters = currentFilters.map((filter) => ({
+          attribute: filter.attribute,
+          operation: filter.operation,
+          value: filter.value,
+        }));
+
+        const searchParams = new URLSearchParams({
+          page: page.toString(),
+          pageSize: PAGE_SIZE.toString(),
+          filters: JSON.stringify(backendFilters),
+        });
+
+        console.log("Making API call to:", `/api/employees?${searchParams}`);
+        const response = await fetch(`/api/employees?${searchParams}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Failed to fetch employees");
+        }
+
+        console.log("API response received:", result);
+        setEmployees(result.data);
+        setPagination({
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalCount: result.totalCount,
+          pageSize: result.pageSize,
+        });
+      } catch (error) {
+        console.error("Error fetching employees:", error);
+        setEmployees([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 0,
+          totalCount: 0,
+          pageSize: PAGE_SIZE,
+        });
+      } finally {
+        setIsLoading(false);
+        isFetchingRef.current = false;
+      }
+    },
+    [filters],
+  );
 
   const handlePageChange = (page: number) => {
     console.log("Page change requested:", page);
@@ -145,7 +148,7 @@ export default function EmployeesPage() {
   useEffect(() => {
     console.log("Initial load effect triggered");
     fetchEmployeesForPage(1);
-  }, []); // Empty dependency array
+  }, [fetchEmployeesForPage]);
 
   return (
     <div className="container p-4 sm:p-6">
